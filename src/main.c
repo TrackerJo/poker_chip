@@ -1,97 +1,37 @@
-/**
- * @file main.c
- *
- */
-
-/*********************
- *      INCLUDES
- *********************/
-
-#ifndef _DEFAULT_SOURCE
-  #define _DEFAULT_SOURCE /* needed for usleep() */
-#endif
-
-#include <stdlib.h>
-#include <stdio.h>
-#ifdef _MSC_VER
-  #include <Windows.h>
-#else
-  #include <unistd.h>
-  #include <pthread.h>
-#endif
-#include "lvgl/lvgl.h"
-#include "lvgl/examples/lv_examples.h"
-#include "lvgl/demos/lv_demos.h"
+#define SDL_MAIN_HANDLED
 #include <SDL.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-#include "hal/hal.h"
+#include "score_ui.h"
+#include "game_state.h"
 
-/*********************
- *      DEFINES
- *********************/
-
-/**********************
- *      TYPEDEFS
- **********************/
-
-/**********************
- *  STATIC PROTOTYPES
- **********************/
-
-/**********************
- *  STATIC VARIABLES
- **********************/
-
-/**********************
- *      MACROS
- **********************/
-
-/**********************
- *   GLOBAL FUNCTIONS
- **********************/
-
-#if LV_USE_OS != LV_OS_FREERTOS
-
-int main(int argc, char **argv)
+int main(void)
 {
-  (void)argc; /*Unused*/
-  (void)argv; /*Unused*/
 
-  /*Initialize LVGL*/
-  lv_init();
+    GameState game = {
+        .kind = GAME_POINT_COUNTER,
+        .player_count = 2,
+        .active_player = 0,
+    };
+    
+    SDL_SetMainReady();
+    lv_init();
 
-  /*Initialize the HAL (display, input devices, tick) for LVGL*/
-  sdl_hal_init(320, 480);
-
-  /* Run the default demo */
-  /* To try a different demo or example, replace this with one of: */
-  /* - lv_demo_benchmark(); */
-  /* - lv_demo_stress(); */
-  /* - lv_example_label_1(); */
-  /* - etc. */
-  lv_demo_widgets();
-
-  while(1) {
-    /* Periodically call the lv_task handler.
-     * It could be done in a timer interrupt or an OS task too.*/
-    uint32_t sleep_time_ms = lv_timer_handler();
-    if(sleep_time_ms == LV_NO_TIMER_READY){
-	sleep_time_ms =  LV_DEF_REFR_PERIOD;
+    lv_display_t *display = lv_sdl_window_create(SCORE_DISPLAY_SIZE, SCORE_DISPLAY_SIZE);
+    if (display == NULL) {
+        fprintf(stderr, "Unable to open the poker chip display.\n");
+        return EXIT_FAILURE;
     }
-#ifdef _MSC_VER
-    Sleep(sleep_time_ms);
-#else
-    usleep(sleep_time_ms * 1000);
-#endif
-  }
 
-  return 0;
+    lv_sdl_window_set_title(display, "Poker Chip");
+    lv_sdl_mouse_create();
+    score_ui_create(lv_display_get_screen_active(display), &game);
+
+    while (lv_display_get_default() != NULL) {
+        uint32_t delay_ms = lv_timer_handler();
+        SDL_Delay(delay_ms == LV_NO_TIMER_READY ? LV_DEF_REFR_PERIOD : delay_ms);
+    }
+
+    return EXIT_SUCCESS;
 }
-
-
-#endif
-
-/**********************
- *   STATIC FUNCTIONS
- **********************/
-

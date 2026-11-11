@@ -73,7 +73,7 @@
 		"version": "0.2.0",
 		"configurations": [
 			{
-				"name": "Debug LVGL demo with gdb",
+				"name": "Debug Poker Chip with gdb",
 				"type": "cppdbg",
 				"request": "launch",
 		        "program": "${workspaceFolder}/bin/main",
@@ -94,7 +94,7 @@
 				  }
 			},
 			{
-				"name": "Debug LVGL demo with LLVM",
+				"name": "Debug Poker Chip with LLVM",
 				"type": "cppdbg",
 				"request": "launch",
 		        "program": "${workspaceFolder}/bin/main",
