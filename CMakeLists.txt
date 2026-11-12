@@ -12,7 +12,13 @@ set(CONFIG_LV_USE_THORVG OFF CACHE INTERNAL "Enable ThorVG")
 add_subdirectory(lvgl)
 target_link_libraries(lvgl PRIVATE SDL2::SDL2)
 
-add_executable(main src/main.c src/score_ui.c)
+add_executable(main
+    src/main.c
+    src/home_ui.c
+    src/add_player_ui.c
+    src/score_ui.c
+    src/game_state.c
+)
 set_target_properties(main PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin"
 )
