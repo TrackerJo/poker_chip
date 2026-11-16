@@ -13,6 +13,10 @@ typedef struct {
     lv_obj_t *name_view;
     lv_obj_t *roster_view;
     lv_obj_t *roster_list;
+    lv_obj_t *add_icon;
+    lv_obj_t *edit_icon;
+    lv_obj_t *play_icon;
+    HomeHold home_hold;
 } AddPlayerUi;
 
 void add_player_ui_create(AddPlayerUi *ui, const UiScreens *screens);

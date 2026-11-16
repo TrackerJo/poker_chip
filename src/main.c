@@ -9,10 +9,6 @@
 #include "welcome_ui.h"
 #include "add_player_ui.h"
 
-static const GameSettings point_counter_settings = {
-    .kind = GAME_POINT_COUNTER,
-    .allow_negative_scores = true,
-};
 
 static void open_screen(lv_obj_t *destination, uint32_t dissolve_ms)
 {
@@ -23,8 +19,7 @@ static void open_screen(lv_obj_t *destination, uint32_t dissolve_ms)
 
 int main(void)
 {
-    GameState game;
-    game_start(&game, &point_counter_settings);
+    GameState game = {0};
     ScoreUi score_ui = { .game = &game };
 
     SDL_SetMainReady();
@@ -46,7 +41,7 @@ int main(void)
     score_ui_create(&score_ui, &screens);
     AddPlayerUi add_player_ui = { .game = &game };
     add_player_ui_create(&add_player_ui, &screens);
-    home_ui_create(&screens);
+    home_ui_create(&screens, &game, &score_ui);
     welcome_ui_create(&screens);
 
     lv_sdl_window_set_title(display, "Poker Chip");
@@ -56,6 +51,8 @@ int main(void)
         uint32_t delay_ms = lv_timer_handler();
         SDL_Delay(delay_ms == LV_NO_TIMER_READY ? LV_DEF_REFR_PERIOD : delay_ms);
     }
+
+    game_destroy(&game);
 
     return EXIT_SUCCESS;
 }

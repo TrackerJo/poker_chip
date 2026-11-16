@@ -18,6 +18,9 @@ add_executable(main
     src/add_player_ui.c
     src/score_ui.c
     src/scoreboard_podium_24.c
+    src/card_suits_24.c
+    src/card_suits_32.c
+    src/card_suits_48.c
     src/game_state.c
     src/welcome_ui.c
     src/mountains.c

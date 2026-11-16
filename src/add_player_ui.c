@@ -21,7 +21,25 @@ static const lv_buttonmatrix_ctrl_t name_key_controls[] = {
 static void show_player_count(AddPlayerUi *ui)
 {
     lv_label_set_text_fmt(ui->status, "Players %u/%u",
-                         (unsigned)ui->game->player_count, (unsigned)MAX_PLAYERS);
+                         (unsigned)ui->game->player_count, (unsigned)ui->game->settings->max_players);
+}
+
+static void refresh_actions(AddPlayerUi *ui) {
+    if (ui->game == NULL) return;
+    if (ui->game->player_count == 0) {
+        lv_obj_set_hidden(ui->edit_icon, true);
+        lv_obj_set_hidden(ui->play_icon, true);
+    } else {
+        lv_obj_set_hidden(ui->edit_icon, false);
+        lv_obj_set_hidden(ui->play_icon, false);
+    }
+    if (ui->game->settings == NULL) return;
+
+    if (ui->game->player_count == ui->game->settings->max_players) {
+        lv_obj_set_hidden(ui->add_icon, true);
+    } else {
+        lv_obj_set_hidden(ui->add_icon, false);
+    }
 }
 
 static void show_name_entry(AddPlayerUi *ui)
@@ -30,11 +48,12 @@ static void show_name_entry(AddPlayerUi *ui)
     lv_obj_set_hidden(ui->name_view, false);
     lv_obj_clean(ui->roster_list);
     show_player_count(ui);
+    refresh_actions(ui);
 }
 
 static bool add_entered_player(AddPlayerUi *ui)
 {
-    if (ui->game->player_count >= MAX_PLAYERS) {
+    if (ui->game->player_count >= ui->game->settings->max_players) {
         lv_label_set_text(ui->status, "Roster full");
         return false;
     }
@@ -47,6 +66,7 @@ static bool add_entered_player(AddPlayerUi *ui)
 
     lv_textarea_set_text(ui->name_input, "");
     show_player_count(ui);
+    refresh_actions(ui);
     return true;
 }
 
@@ -55,19 +75,30 @@ static void add_player_clicked(lv_event_t *event)
     add_entered_player(lv_event_get_user_data(event));
 }
 
-static void start_new_game(lv_event_t *event)
+static void add_player_screen_loading(lv_event_t *event)
 {
     AddPlayerUi *ui = lv_event_get_user_data(event);
-    game_start(ui->game, ui->game->settings);
     lv_textarea_set_text(ui->name_input, "");
     show_name_entry(ui);
+}
+
+static void add_player_hold_started(lv_event_t *event)
+{
+    AddPlayerUi *ui = lv_event_get_user_data(event);
+    home_hold_start(&ui->home_hold, lv_event_get_indev(event));
+}
+
+static void add_player_hold_cancelled(lv_event_t *event)
+{
+    AddPlayerUi *ui = lv_event_get_user_data(event);
+    home_hold_cancel(&ui->home_hold);
 }
 
 static void start_scoring(lv_event_t *event)
 {
     AddPlayerUi *ui = lv_event_get_user_data(event);
     const char *name = lv_textarea_get_text(ui->name_input);
-    bool has_room = ui->game->player_count < MAX_PLAYERS;
+    bool has_room = ui->game->player_count < ui->game->settings->max_players;
     if ((ui->game->player_count == 0 || (has_room && name[0] != '\0')) &&
         !add_entered_player(ui)) {
         return;
@@ -76,12 +107,13 @@ static void start_scoring(lv_event_t *event)
     ui->screens->open_screen(ui->screens->score, 0);
 }
 
-static void create_action(lv_obj_t *view, const char *icon, int32_t x,
+static lv_obj_t *create_action(lv_obj_t *view, const char *icon, int32_t x,
                           lv_event_cb_t callback, AddPlayerUi *ui)
 {
     lv_obj_t *button = create_icon_button(view, icon, callback, ui);
     lv_obj_set_size(button, 44, 28);
     lv_obj_align(button, LV_ALIGN_CENTER, x, 69);
+    return button;
 }
 
 static void show_empty_roster(AddPlayerUi *ui)
@@ -102,6 +134,8 @@ static void remove_player_clicked(lv_event_t *event)
     if (ui->game->player_count == 0) {
         show_empty_roster(ui);
     }
+
+    refresh_actions(ui);
 }
 
 static void open_roster(lv_event_t *event)
@@ -186,7 +220,9 @@ void add_player_ui_create(AddPlayerUi *ui, const UiScreens *screens)
     lv_obj_t *face = lv_obj_create(screen);
     lv_obj_remove_style_all(face);
     lv_obj_set_scrollable(face, false);
-    lv_obj_set_clickable(face, false);
+    lv_obj_set_clickable(face, true);
+    lv_obj_set_adv_hittest(face, true);
+    lv_obj_set_gesture_bubble(face, false);
     lv_obj_set_size(face, lv_pct(100), lv_pct(100));
     lv_obj_center(face);
     lv_obj_set_style_radius(face, LV_RADIUS_CIRCLE, 0);
@@ -196,9 +232,8 @@ void add_player_ui_create(AddPlayerUi *ui, const UiScreens *screens)
     lv_obj_set_style_border_color(face, lv_color_hex(0x5084DF), 0);
 
     ui->name_view = create_view(screen);
-    ui->status = create_label(ui->name_view, NULL);
+    ui->status = create_label(ui->name_view, "");
     lv_obj_align(ui->status, LV_ALIGN_CENTER, 0, -81);
-    show_player_count(ui);
 
     ui->name_input = lv_textarea_create(ui->name_view);
     lv_textarea_set_one_line(ui->name_input, true);
@@ -222,9 +257,17 @@ void add_player_ui_create(AddPlayerUi *ui, const UiScreens *screens)
     lv_obj_align(keyboard, LV_ALIGN_CENTER, 0, 5);
     lv_obj_add_event_cb(ui->name_input, add_player_clicked, LV_EVENT_READY, ui);
 
-    create_action(ui->name_view, LV_SYMBOL_PLUS, -47, add_player_clicked, ui);
-    create_action(ui->name_view, LV_SYMBOL_EDIT, 0, open_roster, ui);
-    create_action(ui->name_view, LV_SYMBOL_PLAY, 47, start_scoring, ui);
+    ui->add_icon = create_action(ui->name_view, LV_SYMBOL_PLUS, -47, add_player_clicked, ui);
+    ui->edit_icon = create_action(ui->name_view, LV_SYMBOL_EDIT, 0, open_roster, ui);
+    ui->play_icon = create_action(ui->name_view, LV_SYMBOL_PLAY, 47, start_scoring, ui);
+    refresh_actions(ui);
+
     create_roster_view(screen, ui);
-    lv_obj_add_event_cb(screen, start_new_game, LV_EVENT_SCREEN_LOAD_START, ui);
+    home_hold_create(&ui->home_hold, screen, screens);
+    lv_obj_add_event_cb(face, add_player_hold_started, LV_EVENT_LONG_PRESSED, ui);
+    lv_obj_add_event_cb(face, add_player_hold_cancelled, LV_EVENT_RELEASED, ui);
+    lv_obj_add_event_cb(face, add_player_hold_cancelled, LV_EVENT_PRESS_LOST, ui);
+    lv_obj_add_event_cb(face, add_player_hold_cancelled, LV_EVENT_GESTURE, ui);
+    lv_obj_add_event_cb(screen, add_player_screen_loading, LV_EVENT_SCREEN_LOAD_START, ui);
+    lv_obj_add_event_cb(screen, add_player_hold_cancelled, LV_EVENT_SCREEN_UNLOAD_START, ui);
 }
