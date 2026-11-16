@@ -73,21 +73,7 @@ static void start_scoring(lv_event_t *event)
         return;
     }
 
-    ui->screens->open_screen(ui->screens->score);
-}
-
-static lv_obj_t *create_icon_button(lv_obj_t *parent, const char *icon,
-                                    lv_event_cb_t callback, AddPlayerUi *ui)
-{
-    lv_obj_t *button = lv_button_create(parent);
-    lv_obj_remove_style_all(button);
-    lv_obj_add_event_cb(button, callback, LV_EVENT_CLICKED, ui);
-
-    lv_obj_t *label = lv_label_create(button);
-    lv_label_set_text(label, icon);
-    lv_obj_set_style_text_color(label, lv_color_hex(0x183D70), 0);
-    lv_obj_center(label);
-    return button;
+    ui->screens->open_screen(ui->screens->score, 0);
 }
 
 static void create_action(lv_obj_t *view, const char *icon, int32_t x,
@@ -144,7 +130,8 @@ static void open_roster(lv_event_t *event)
         lv_obj_set_style_text_color(name, lv_color_hex(0x12274A), 0);
         lv_obj_align(name, LV_ALIGN_LEFT_MID, 8, 0);
 
-        lv_obj_t *remove = create_icon_button(row, LV_SYMBOL_TRASH, remove_player_clicked, ui);
+        lv_obj_t *remove = create_icon_button_with_color(row, LV_SYMBOL_TRASH, remove_player_clicked, ui,
+                                             lv_color_hex(0x12274A));
         lv_obj_set_size(remove, 40, 32);
         lv_obj_align(remove, LV_ALIGN_RIGHT_MID, 0, 0);
     }
@@ -170,9 +157,7 @@ static lv_obj_t *create_view(lv_obj_t *screen)
 static void create_roster_view(lv_obj_t *screen, AddPlayerUi *ui)
 {
     ui->roster_view = create_view(screen);
-    lv_obj_t *title = lv_label_create(ui->roster_view);
-    lv_label_set_text(title, "Edit players");
-    lv_obj_set_style_text_color(title, lv_color_hex(0x12274A), 0);
+    lv_obj_t *title = create_label(ui->roster_view, "Edit players");
     lv_obj_align(title, LV_ALIGN_CENTER, 0, -81);
 
     ui->roster_list = lv_obj_create(ui->roster_view);
@@ -211,18 +196,19 @@ void add_player_ui_create(AddPlayerUi *ui, const UiScreens *screens)
     lv_obj_set_style_border_color(face, lv_color_hex(0x5084DF), 0);
 
     ui->name_view = create_view(screen);
-    ui->status = lv_label_create(ui->name_view);
-    lv_obj_set_style_text_color(ui->status, lv_color_hex(0x12274A), 0);
+    ui->status = create_label(ui->name_view, NULL);
     lv_obj_align(ui->status, LV_ALIGN_CENTER, 0, -81);
     show_player_count(ui);
 
     ui->name_input = lv_textarea_create(ui->name_view);
     lv_textarea_set_one_line(ui->name_input, true);
+    lv_obj_set_scroll_dir(ui->name_input, LV_DIR_HOR);
     lv_obj_set_scrollbar_mode(ui->name_input, LV_SCROLLBAR_MODE_OFF);
     lv_textarea_set_max_length(ui->name_input, (MAX_PLAYER_NAME_LENGTH - 1) / 4);
     lv_textarea_set_placeholder_text(ui->name_input, "Player name");
-    lv_obj_set_size(ui->name_input, 156, 28);
-    lv_obj_set_style_pad_all(ui->name_input, 5, 0);
+    lv_obj_set_width(ui->name_input, 156);
+    lv_obj_set_style_pad_hor(ui->name_input, 5, 0);
+    lv_obj_set_style_pad_ver(ui->name_input, 4, 0);
     lv_obj_align(ui->name_input, LV_ALIGN_CENTER, 0, -55);
 
     lv_obj_t *keyboard = lv_keyboard_create(ui->name_view);

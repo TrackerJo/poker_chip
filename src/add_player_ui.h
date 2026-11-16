@@ -3,6 +3,7 @@
 
 #include "game_state.h"
 #include "ui_screens.h"
+#include "components.h"
 
 typedef struct {
     GameState *game;

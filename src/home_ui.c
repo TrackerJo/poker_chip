@@ -3,7 +3,7 @@
 static void open_add_player(lv_event_t *event)
 {
     const UiScreens *screens = lv_event_get_user_data(event);
-    screens->open_screen(screens->add_player);
+    screens->open_screen(screens->add_player, 0);
 }
 
 void home_ui_create(UiScreens *screens)

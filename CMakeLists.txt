@@ -17,7 +17,11 @@ add_executable(main
     src/home_ui.c
     src/add_player_ui.c
     src/score_ui.c
+    src/scoreboard_podium_24.c
     src/game_state.c
+    src/welcome_ui.c
+    src/mountains.c
+    src/components.c
 )
 set_target_properties(main PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin"
