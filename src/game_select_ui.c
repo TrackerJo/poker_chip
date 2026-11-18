@@ -37,6 +37,28 @@ static const GameSettings oh_hell_settings = {
     .score_hand = score_oh_hell_hand,
 };
 
+
+static int score_pinochle_hand(const int values[MAX_SCORE_FIELDS])
+{
+    int bid = values[PINOCHLE_BID];
+    int points = values[PINOCHLE_POINTS];
+    int is_winner = values[PINOCHLE_WINNER];
+    return is_winner == 0 ? points : points >= bid ? points : -bid;
+}
+
+static const GameSettings pinochle_settings = {
+    .kind = PINOCHLE,
+    .max_players = 7,
+    .score_field_count = PINOCHLE_FIELD_COUNT,
+    .allow_negative_scores = true,
+    .score_fields = {
+        [PINOCHLE_BID] = { .label = "Bid", .max_value = 150 },
+        [PINOCHLE_POINTS] = { .label = "Points", .max_value = 150, .hidden = true },
+        [PINOCHLE_WINNER] = {.label = "Winner", .max_value = 1, .hidden = true}
+    },
+    .score_hand = score_pinochle_hand,
+};
+
 typedef struct {
     const UiScreens *screens;
     GameState *game;
@@ -50,6 +72,7 @@ static const struct {
 } games[] = {
     { "Euchre", &euchre_settings },
     { "Oh Hell", &oh_hell_settings },
+    { "Pinochle", &pinochle_settings},
     { "Score Counter", &point_counter_settings },
 };
 

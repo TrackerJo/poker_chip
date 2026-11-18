@@ -86,10 +86,25 @@ static void refresh_score_value(ScoreUi *ui)
     }
 }
 
+static bool pinochle_needs_bid(const GameState *game)
+{
+    if (game->settings == NULL || game->settings->kind != PINOCHLE)
+        return false;
+
+    for (size_t player = 0; player < game->player_count; player++) {
+        int winner;
+        if (game_get_field(game, player, PINOCHLE_WINNER, &winner) && winner == 1)
+            return false;
+    }
+
+    return true;
+}
+
 static void score_ui_refresh(ScoreUi *ui)
 {
     const GameState *game = ui->game;
     bool multiple_fields = has_multiple_fields(ui);
+    bool needs_bid = pinochle_needs_bid(game);
     lv_obj_set_hidden(ui->field_tabs, !multiple_fields);
     lv_obj_set_hidden(ui->hand_status, !multiple_fields);
     lv_obj_set_hidden(ui->finish_hand_button, !multiple_fields);
@@ -99,9 +114,16 @@ static void score_ui_refresh(ScoreUi *ui)
         for (size_t field = 0; field < MAX_SCORE_FIELDS; field++)
         {
             lv_obj_t *tab = lv_obj_get_child(ui->field_tabs, (int32_t)field);
-            bool available = field < game->settings->score_field_count;
-            lv_obj_set_hidden(tab, !available);
-            if (available)
+            bool visible = field < game->settings->score_field_count &&
+                           !game->settings->score_fields[field].hidden;
+            if (game->settings->kind == PINOCHLE) {
+                if (field == PINOCHLE_BID)
+                    visible = needs_bid;
+                else if (field == PINOCHLE_POINTS)
+                    visible = !needs_bid;
+            }
+            lv_obj_set_hidden(tab, !visible);
+            if (visible)
             {
                 bool selected = field == ui->active_field;
                 lv_obj_t *label = lv_obj_get_child(tab, 0);
@@ -111,6 +133,9 @@ static void score_ui_refresh(ScoreUi *ui)
             }
         }
     }
+
+    lv_label_set_text(lv_obj_get_child(ui->finish_hand_button, 0),
+                      needs_bid ? "Set Bet" : "Finish Hand");
 
     if (game->active_player >= game->player_count)
     {
@@ -151,6 +176,7 @@ static void create_field_tabs(ScoreUi *ui)
     lv_obj_set_flex_flow(ui->field_tabs, LV_FLEX_FLOW_ROW);
     lv_obj_align(ui->field_tabs, LV_ALIGN_CENTER, 0, -67);
 
+    /* Keep each tab's child index equal to its score field index. */
     for (size_t field = 0; field < MAX_SCORE_FIELDS; field++)
     {
         lv_obj_t *tab = create_icon_button(ui->field_tabs, "", select_score_field, ui);
@@ -181,39 +207,66 @@ static void show_hand_status(ScoreUi *ui, const char *message)
     }
 }
 
-static void finish_hand_clicked(lv_event_t *event)
+static void set_pinochle_bid(ScoreUi *ui)
+{
+    GameState *game = ui->game;
+    int bid;
+    if (!game_get_field(game, game->active_player, PINOCHLE_BID, &bid)) {
+        show_hand_status(ui, "Enter a value");
+        return;
+    }
+
+    for (size_t player = 0; player < game->player_count; player++) {
+        bool winner = player == game->active_player;
+        game_set_field(game, player, PINOCHLE_WINNER, winner);
+        int other_bid;
+        if (!winner && !game_get_field(game, player, PINOCHLE_BID, &other_bid))
+            game_set_field(game, player, PINOCHLE_BID, 0);
+    }
+
+    ui->active_field = PINOCHLE_POINTS;
+    score_ui_refresh(ui);
+}
+
+static void hand_action_clicked(lv_event_t *event)
 {
     ScoreUi *ui = lv_event_get_user_data(event);
     if (ui->hand_status_timer != NULL)
         return;
 
+    if (pinochle_needs_bid(ui->game)) {
+        set_pinochle_bid(ui);
+        return;
+    }
+
     size_t missing_player, missing_field;
     switch (game_finish_hand(ui->game, &missing_player, &missing_field))
     {
-    case FINISH_HAND_OK:
-        ui->active_field = 0;
-        score_ui_refresh(ui);
-        show_hand_status(ui, "Hand saved");
-        break;
-    case FINISH_HAND_MISSING_FIELD:
-        ui->game->active_player = missing_player;
-        ui->active_field = missing_field;
-        score_ui_refresh(ui);
-        show_hand_status(ui, ui->game->settings->score_fields[missing_field].min_value == 0
-                                ? "Enter a value (- for 0)"
-                                : "Enter a value");
-        break;
-    case FINISH_HAND_SCORE_OUT_OF_RANGE:
-        show_hand_status(ui, "Total out of range");
-        break;
-    case FINISH_HAND_NO_MEMORY:
-        show_hand_status(ui, "Out of memory");
-        break;
-    case FINISH_HAND_UNAVAILABLE:
-        show_hand_status(ui, "No hand to finish");
-        break;
+        case FINISH_HAND_OK:
+            ui->active_field = 0;
+            score_ui_refresh(ui);
+            show_hand_status(ui, "Hand saved");
+            break;
+        case FINISH_HAND_MISSING_FIELD:
+            ui->game->active_player = missing_player;
+            ui->active_field = missing_field;
+            score_ui_refresh(ui);
+            show_hand_status(ui, ui->game->settings->score_fields[missing_field].min_value == 0
+                                    ? "Enter a value (- for 0)"
+                                    : "Enter a value");
+            break;
+        case FINISH_HAND_SCORE_OUT_OF_RANGE:
+            show_hand_status(ui, "Total out of range");
+            break;
+        case FINISH_HAND_NO_MEMORY:
+            show_hand_status(ui, "Out of memory");
+            break;
+        case FINISH_HAND_UNAVAILABLE:
+            show_hand_status(ui, "No hand to finish");
+            break;
     }
 }
+
 
 static void show_score_view(ScoreUi *ui)
 {
@@ -439,6 +492,15 @@ static void draw_euchre_buttons(ScoreUi *ui)
     lv_obj_set_size(ui->trump_icon, 44, 44);
 }
 
+static void draw_trump_buttons(ScoreUi *ui)
+{
+    ui->trump_icon = create_icon_button_with_color(
+        ui->score_view, "♥", open_trump_view, ui, lv_color_hex(0xD32F2F));
+    lv_obj_set_style_text_font(ui->trump_icon, &card_suits_24, LV_PART_MAIN);
+    lv_obj_set_size(ui->trump_icon, 44, 44);
+    lv_obj_align(ui->trump_icon, LV_ALIGN_BOTTOM_MID, 0, -8);
+}
+
 static void style_round_control(lv_obj_t *button)
 {
     lv_obj_set_size(button, ROUND_CONTROL_SIZE, ROUND_CONTROL_SIZE);
@@ -476,6 +538,11 @@ void score_ui_load(ScoreUi *ui)
     if (ui->game->settings != NULL && ui->game->settings->kind == EUCHRE)
     {
         draw_euchre_buttons(ui);
+    }
+
+    if (ui->game->settings != NULL && ui->game->settings->kind == OH_HELL)
+    {
+        draw_trump_buttons(ui);
     }
 }
 
@@ -568,7 +635,8 @@ void score_ui_create(ScoreUi *ui, const UiScreens *screens)
     lv_obj_set_style_text_font(lv_obj_get_child(ui->leaderboard_icon, 0), &scoreboard_podium_24, 0);
     style_round_control(ui->leaderboard_icon);
 
-    ui->finish_hand_button = create_button(ui->action_row, "Finish Hand", finish_hand_clicked, ui);
+
+    ui->finish_hand_button = create_button(ui->action_row, "Finish Hand", hand_action_clicked, ui);
     lv_obj_set_size(ui->finish_hand_button, 112, ROUND_CONTROL_SIZE);
     lv_obj_set_gesture_bubble(ui->finish_hand_button, false);
     lv_obj_set_style_radius(ui->finish_hand_button, LV_RADIUS_CIRCLE, 0);

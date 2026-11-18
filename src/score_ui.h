@@ -5,7 +5,6 @@
 #include "ui_screens.h"
 #include "components.h"
 
-
 typedef struct {
     GameState *game;
     const UiScreens *screens;

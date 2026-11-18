@@ -9,13 +9,17 @@ enum { MAX_SCORE_FIELDS = 3 };
 typedef enum {
     GAME_POINT_COUNTER,
     EUCHRE,
-    OH_HELL
+    OH_HELL,
+    PINOCHLE
 } GameKind;
+
+enum { PINOCHLE_BID, PINOCHLE_POINTS, PINOCHLE_WINNER, PINOCHLE_FIELD_COUNT };
 
 typedef struct {
     const char *label;
     int min_value;
     int max_value;
+    bool hidden;
 } ScoreField;
 
 typedef struct {
