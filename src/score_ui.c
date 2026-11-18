@@ -8,7 +8,7 @@ LV_FONT_DECLARE(card_suits_48);
 
 enum
 {
-    HAND_ERROR_TIME_MS = 2000,
+    HAND_STATUS_TIME_MS = 2000,
     SCORE_DRAG_PIXELS_PER_POINT = 16,
     ROUND_CONTROL_SIZE = 40,
 };
@@ -27,13 +27,12 @@ static bool has_multiple_fields(const ScoreUi *ui)
     return ui->game->settings != NULL && ui->game->settings->score_field_count > 1;
 }
 
-static void clear_hand_error(lv_timer_t *timer)
+static void clear_hand_status(lv_timer_t *timer)
 {
     ScoreUi *ui = lv_timer_get_user_data(timer);
-    ui->hand_error_timer = NULL;
+    ui->hand_status_timer = NULL;
     lv_timer_delete(timer);
     lv_label_set_text(ui->hand_status, "");
-    lv_obj_align(ui->hand_status, LV_ALIGN_CENTER, 0, 35);
     if (lv_obj_is_hidden(ui->added_label))
         lv_obj_set_hidden(ui->action_row, false);
 }
@@ -42,13 +41,13 @@ static void score_press_ended(lv_event_t *event)
 {
     ScoreUi *ui = lv_event_get_user_data(event);
     home_hold_cancel(&ui->home_hold);
-    if (lv_event_get_code(event) == LV_EVENT_SCREEN_UNLOAD_START && ui->hand_error_timer != NULL)
-        clear_hand_error(ui->hand_error_timer);
+    if (lv_event_get_code(event) == LV_EVENT_SCREEN_UNLOAD_START && ui->hand_status_timer != NULL)
+        clear_hand_status(ui->hand_status_timer);
 
     lv_obj_set_hidden(ui->added_label, true);
     lv_obj_set_hidden(ui->plus_icon, false);
     lv_obj_set_hidden(ui->minus_icon, false);
-    lv_obj_set_hidden(ui->action_row, ui->hand_error_timer != NULL);
+    lv_obj_set_hidden(ui->action_row, ui->hand_status_timer != NULL);
     lv_obj_set_hidden(ui->field_tabs, !has_multiple_fields(ui));
 
     lv_obj_set_hidden(ui->hand_status, !has_multiple_fields(ui));
@@ -85,10 +84,6 @@ static void refresh_score_value(ScoreUi *ui)
         lv_obj_set_style_text_font(ui->score_label, &lv_font_montserrat_48, 0);
         lv_label_set_text(ui->score_label, "-");
     }
-
-    if (has_multiple_fields(ui) && ui->hand_error_timer == NULL &&
-        lv_label_get_text(ui->hand_status)[0] != '\0')
-        lv_label_set_text(ui->hand_status, "");
 }
 
 static void score_ui_refresh(ScoreUi *ui)
@@ -175,12 +170,12 @@ static void create_field_tabs(ScoreUi *ui)
     }
 }
 
-static void show_hand_error(ScoreUi *ui, const char *message)
+static void show_hand_status(ScoreUi *ui, const char *message)
 {
-    lv_label_set_text(ui->hand_status, message);
-    ui->hand_error_timer = lv_timer_create(clear_hand_error, HAND_ERROR_TIME_MS, ui);
-    if (ui->hand_error_timer != NULL)
+    ui->hand_status_timer = lv_timer_create(clear_hand_status, HAND_STATUS_TIME_MS, ui);
+    if (ui->hand_status_timer != NULL)
     {
+        lv_label_set_text(ui->hand_status, message);
         lv_obj_align_to(ui->hand_status, ui->action_row, LV_ALIGN_CENTER, 0, 0);
         lv_obj_set_hidden(ui->action_row, true);
     }
@@ -189,7 +184,7 @@ static void show_hand_error(ScoreUi *ui, const char *message)
 static void finish_hand_clicked(lv_event_t *event)
 {
     ScoreUi *ui = lv_event_get_user_data(event);
-    if (ui->hand_error_timer != NULL)
+    if (ui->hand_status_timer != NULL)
         return;
 
     size_t missing_player, missing_field;
@@ -198,24 +193,24 @@ static void finish_hand_clicked(lv_event_t *event)
     case FINISH_HAND_OK:
         ui->active_field = 0;
         score_ui_refresh(ui);
-        lv_label_set_text(ui->hand_status, "Hand saved");
+        show_hand_status(ui, "Hand saved");
         break;
     case FINISH_HAND_MISSING_FIELD:
         ui->game->active_player = missing_player;
         ui->active_field = missing_field;
         score_ui_refresh(ui);
-        show_hand_error(ui, ui->game->settings->score_fields[missing_field].min_value == 0
+        show_hand_status(ui, ui->game->settings->score_fields[missing_field].min_value == 0
                                 ? "Enter a value (- for 0)"
                                 : "Enter a value");
         break;
     case FINISH_HAND_SCORE_OUT_OF_RANGE:
-        show_hand_error(ui, "Total out of range");
+        show_hand_status(ui, "Total out of range");
         break;
     case FINISH_HAND_NO_MEMORY:
-        show_hand_error(ui, "Out of memory");
+        show_hand_status(ui, "Out of memory");
         break;
     case FINISH_HAND_UNAVAILABLE:
-        show_hand_error(ui, "No hand to finish");
+        show_hand_status(ui, "No hand to finish");
         break;
     }
 }
@@ -543,7 +538,6 @@ void score_ui_create(ScoreUi *ui, const UiScreens *screens)
 
     ui->hand_status = create_label(ui->score_view, "");
     lv_obj_set_style_text_letter_space(ui->hand_status, 0, 0);
-    lv_obj_align(ui->hand_status, LV_ALIGN_CENTER, 0, 35);
 
     ui->plus_icon = create_score_step_button(score_row, LV_SYMBOL_PLUS, plus_icon_held,
                                              plus_icon_held_ended, ui);

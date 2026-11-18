@@ -6,6 +6,7 @@
 #include "score_ui.h"
 #include "game_state.h"
 #include "home_ui.h"
+#include "game_select_ui.h"
 #include "welcome_ui.h"
 #include "add_player_ui.h"
 
@@ -34,6 +35,7 @@ int main(void)
     UiScreens screens = {
         .welcome = lv_display_get_screen_active(display),
         .home = lv_obj_create(NULL),
+        .game_select = lv_obj_create(NULL),
         .add_player = lv_obj_create(NULL),
         .score = lv_obj_create(NULL),
         .open_screen = open_screen,
@@ -41,7 +43,8 @@ int main(void)
     score_ui_create(&score_ui, &screens);
     AddPlayerUi add_player_ui = { .game = &game };
     add_player_ui_create(&add_player_ui, &screens);
-    home_ui_create(&screens, &game, &score_ui);
+    home_ui_create(&screens);
+    game_select_ui_create(&screens, &game, &score_ui);
     welcome_ui_create(&screens);
 
     lv_sdl_window_set_title(display, "Poker Chip");

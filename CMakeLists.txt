@@ -15,6 +15,7 @@ target_link_libraries(lvgl PRIVATE SDL2::SDL2)
 add_executable(main
     src/main.c
     src/home_ui.c
+    src/game_select_ui.c
     src/add_player_ui.c
     src/score_ui.c
     src/scoreboard_podium_24.c
@@ -24,6 +25,7 @@ add_executable(main
     src/game_state.c
     src/welcome_ui.c
     src/mountains.c
+    src/point_counter_icon.c
     src/components.c
 )
 set_target_properties(main PROPERTIES

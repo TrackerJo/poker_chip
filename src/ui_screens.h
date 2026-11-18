@@ -8,6 +8,7 @@ enum { DISPLAY_SIZE = 240 };
 
 typedef struct {
     lv_obj_t *home;
+    lv_obj_t *game_select;
     lv_obj_t *add_player;
     lv_obj_t *score;
     lv_obj_t *welcome;

@@ -63,6 +63,44 @@ void home_hold_cancel(HomeHold *hold)
     set_ring_width(hold->ring, HOME_RING_WIDTH);
 }
 
+void create_round_screen_background(lv_obj_t *screen)
+{
+    lv_obj_remove_style_all(screen);
+    lv_obj_set_scrollable(screen, false);
+    lv_obj_set_style_bg_color(screen, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, 0);
+
+    lv_obj_t *face = lv_obj_create(screen);
+    lv_obj_remove_style_all(face);
+    lv_obj_set_scrollable(face, false);
+    lv_obj_set_clickable(face, false);
+    lv_obj_set_size(face, DISPLAY_SIZE, DISPLAY_SIZE);
+    lv_obj_center(face);
+    lv_obj_set_style_radius(face, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(face, lv_color_hex(0x729adb), 0);
+    lv_obj_set_style_bg_opa(face, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(face, HOME_RING_WIDTH, 0);
+    lv_obj_set_style_border_color(face, lv_color_hex(0x5084df), 0);
+}
+
+lv_obj_t *create_app_icon(lv_obj_t *parent, const lv_image_dsc_t *source,
+                         lv_event_cb_t callback, void *data)
+{
+    lv_obj_t *tile = lv_button_create(parent);
+    lv_obj_remove_style_all(tile);
+    lv_obj_set_size(tile, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_style_radius(tile, 8, 0);
+    lv_obj_set_style_clip_corner(tile, true, 0);
+    lv_obj_set_style_opa(tile, LV_OPA_70, LV_STATE_PRESSED);
+    lv_obj_set_style_outline_width(tile, 2, LV_STATE_FOCUS_KEY);
+    lv_obj_set_style_outline_color(tile, lv_color_white(), LV_STATE_FOCUS_KEY);
+    lv_obj_add_event_cb(tile, callback, LV_EVENT_CLICKED, data);
+
+    lv_obj_t *image = lv_image_create(tile);
+    lv_image_set_src(image, source);
+    return tile;
+}
+
 lv_obj_t *create_icon_button_with_color(lv_obj_t *parent, const char *icon,
                              lv_event_cb_t callback, void *data, lv_color_t color)
 {

@@ -14,7 +14,7 @@ typedef struct {
     lv_obj_t *player_label;
     lv_obj_t *score_label;
     lv_obj_t *hand_status;
-    lv_timer_t *hand_error_timer;
+    lv_timer_t *hand_status_timer;
     lv_obj_t *finish_hand_button;
     lv_obj_t *added_label;
     lv_obj_t *minus_icon;
